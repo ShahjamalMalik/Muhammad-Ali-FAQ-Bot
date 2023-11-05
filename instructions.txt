@@ -1,0 +1,7 @@
+https://discord.com/api/oauth2/authorize?client_id=1153473925238509599&permissions=274877908992&scope=bot
+
+Bot should be workable out the box, nothing special. 
+- Run "python3 .\muhammad_ali_faq_bot.py" to run the FAQ Bot in the shell 
+- Run "python 3 .\simple_discord_faq_bot.py" to make the bot work on Discord (have it online). 
+
+A lot of the answers I wrote myself, so would be cool if you tested some of them out; I feel like some of the answers are fairly informative and interesting. :)

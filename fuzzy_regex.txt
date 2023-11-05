@@ -1,0 +1,20 @@
+^(who|tell me about).*(muhammad ali|muhammad)$
+^(what was|can you share).*(muhammad ali's record|boxing record)$
+^(who did|who was).*(muhammad ali defeat in his debut|muhammad ali's first opponent)$
+^(when did|when).*muhammad ali.*(professional debut|start his boxing career)$
+^(at what age|when).*(muhammad ali|heavyweight champion|first time|heavyweight title)$
+^(what was|what).*muhammad ali.*(name before.*changed it|called before.*changed his name)$
+^(what was|what did|why did|how did|why was|how was).*muhammad ali.*(name before|lose.*boxing license).*$
+^(what are|can you tell me|tell me|some of).*muhammad ali.*(signature quotes|iconic sayings).*$
+^(who did|who was).*(muhammad ali|'thrilla in manila'|opponent)$
+^(who has|list).*muhammad ali.*(lost to|defeats).*$
+^(when did|when).*muhammad ali.*(pass away|leave us).*$
+^(where|tell me).*(muhammad ali's place of birth|muhammad ali.*born)$
+^(what was|who was).*(muhammad ali's coach|ali's trainer)$
+^(how many|how much).*gold medals.*muhammad ali.*(earn|win).*(olympics|olympic)?$
+^(which of|what are some of).*muhammad ali.*fights.*(highest|biggest).*viewership.*|what are some of muhammad ali's biggest fights in terms of viewership$
+^(what are some of|tell me about).*muhammad ali.*(amateur boxing achievements|accomplishments.*amateur boxer).*$
+^(what tactic did|how did).*muhammad ali.*(beat|defeat).*george foreman$
+^(in what|can you identify).*fight.*ali's jaw.*broken|fight.*muhammad ali's jaw.*broken$
+^(in what|tell me about).*fight.*ali('s)? slip.*(to the ground)?.*(official)? knockdown|fight where ali's slip was mistakenly ruled.*(as)?(an)?(official)?(a)?(an)?(an official)?(official)? knockdown$
+^(what medical condition did|what illness did).*muhammad ali.*suffer.*boxing career$
