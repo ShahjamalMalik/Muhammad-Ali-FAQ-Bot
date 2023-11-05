@@ -26,7 +26,7 @@ def load_FAQ_data():
     return questions, answers, intents
 
 
-# A function to check for greetings
+# A function to check for greetings using spaCy
 def check_for_greeting(utterance):
     doc = nlp(utterance)
     matcher = Matcher(nlp.vocab)
@@ -42,6 +42,51 @@ def check_for_greeting(utterance):
 
     return any(matches)
 
+# A function to check for farewells using spaCy
+def check_for_farewell(utterance):
+    doc = nlp(utterance)
+
+    # Define patterns for common farewells
+    farewell_patterns = [
+        {"LOWER": "bye"},
+        {"LOWER": "goodbye"},
+        {"LOWER": "see", "LOWER": "you", "LOWER": "later"},
+    ]
+
+    # Check if any of the farewell patterns match
+    for pattern in farewell_patterns:
+        if any(token.text == pattern["LOWER"] for token in doc):
+            return True
+
+    return False
+# Function to determine if a sentence is a question
+def is_question(doc):
+    # Check if the sentence starts with a question word
+    if len(doc) > 0 and doc[0].text.lower() in ["how", "what", "why", "where", "when"]:
+        return True
+    
+    # Check if the sentence contains a question mark
+    if "?" in doc.text:
+        return True
+
+    # Check if the sentence contains an auxiliary verb (e.g., "is," "can," "will") which is typical in questions
+    if any(token.dep_ == "aux" for token in doc):
+        return True
+
+    return False
+# Function to determine if a sentence is a statement
+def is_statement(doc):
+    # Check if the sentence contains a verb
+    if any(token.pos_ == "VERB" for token in doc):
+        return True
+
+    # Check if the sentence contains an imperative verb (e.g., "give," "tell," "go," "make," "drive")
+    if any(token.lemma_.lower() in ["give", "tell", "go", "make", "drive"] for token in doc):
+        return True
+
+    # You can add more specific criteria as needed based on your use case
+
+    return False
 # This function takes user input (utterance) and a list of intents, then matches the user input with the fuzzy regex patterns in the intents. It returns a list of matched intents sorted by the number of errors.
 def match_intent(utterance, intents):
     matched_intents = []
@@ -62,25 +107,39 @@ def match_intent(utterance, intents):
 
     return []
 
-# This function classifies the speech act (e.g., question, command, statement) of the utterance.
+# This function classifies the speech act (e.g., question, command, statement) of the utterance using spaCy.
 def classify_speech_act(utterance):
     doc = nlp(utterance)
-
+    
+    # Check for "ORG" entities
     if any(ent.label_ == "ORG" for ent in doc.ents):
         return "Sorry, I don't know. I don't work for that organization."
-    elif any(ent.label_ == "GPE" for ent in doc.ents):
+    
+    # Check for "GPE" entities
+    if any(ent.label_ == "GPE" for ent in doc.ents):
         return "Sorry, I don't know. I've never been to that place."
-    elif any(question_word in utterance for question_word in ["how", "what", "why", "where", "when"]):
-        return "Sorry, I don't know the answer to that."
-    elif any(command_word in utterance for command_word in ["give", "tell", "go", "make", "drive"]):
-        return "Sorry, I don't know how to do that."
-    else:
-        return "Sorry, I don't understand your request."
+    
+    # Check if it's a question
+    if is_question(doc):
+        return "It seems like you're asking a question, but I may not have the answer."
+    
+    # Check if it's a statement
+    if is_statement(doc):
+        return "It looks like you're making a statement. Is there something specific you'd like to know?"
+    
+
+    
+    # If none of the above, provide a generic response
+    return "Sorry, I don't understand your request."
+
 
 # This function generates responses based on the matched intent and user input.
 def generate(intent, responses, questions, utterance):
-    print(utterance)
+    #If not intent
     if not intent:
+        # Check if the string get to is in the utterance, if it is send a customized google maps link
+        # If there's an ent.label tag of person or work_of_art and it's not muhammad ali, give back a google link
+        # If neither are the case then do classify_speech_act with utterance
         if "get to" in utterance:
             location = re.search(r'get to (.+)', utterance).group(1)
             google_maps_link = f"https://www.google.com/maps/search/{location.replace(' ', '%20')}"
@@ -99,7 +158,7 @@ def generate(intent, responses, questions, utterance):
     if isinstance(intent, int):
         # If there's only one matching intent, return the corresponding response
         return responses[intent]
-
+    #If multiple matching responses, let the user choose which one they want answered by picking a number that assosciates with the question
     elif isinstance(intent, list):
         if len(intent) == 1:
             # If there's only one matching intent, return the corresponding response
@@ -133,8 +192,12 @@ def main():
             # Get user's input and process it
             utterance = input(">>> ").strip().lower().replace(".", "").replace("?", "")
 
+            #The utterance will be checked for farewells/greetings with the methods we created to do so, if neither is the case then generate an appropriate response
             if check_for_greeting(utterance):
                 print("Hello! How can I assist you today?")
+            elif check_for_farewell(utterance):
+                print("Goodbye! If you have more questions in the future, feel free to return.")
+                break  # Exit the chat loop
             else:
                 intent = match_intent(utterance, intents)
                 response = generate(intent, responses, questions, utterance)
