@@ -31,13 +31,13 @@ def check_for_greeting(utterance):
     doc = nlp(utterance)
     matcher = Matcher(nlp.vocab)
 
-    # Defining a pattern for common greetings
+    # Defining a pattern for common greetings (hello, hi, hey)
     greeting_pattern = [{"LOWER": {"in": ["hello", "hi", "hey"]}}]
 
     # Adding the greeting pattern to the matcher
     matcher.add("Greeting", [greeting_pattern])
 
-    # Usinf the matcher to find matches in the input
+    # Using the matcher to find matches in the input
     matches = matcher(doc)
 
     return any(matches)
@@ -46,7 +46,7 @@ def check_for_greeting(utterance):
 def check_for_farewell(utterance):
     doc = nlp(utterance)
 
-    # Define patterns for common farewells
+    # Define patterns for common farewells (In this case we do bye, goodbye and see you later)
     farewell_patterns = [
         {"LOWER": "bye"},
         {"LOWER": "goodbye"},
@@ -61,8 +61,8 @@ def check_for_farewell(utterance):
     return False
 # Function to determine if a sentence is a question
 def is_question(doc):
-    # Check if the sentence starts with a question word
-    if len(doc) > 0 and doc[0].text.lower() in ["how", "what", "why", "where", "when"]:
+    # Check if the sentence starts with a question word (who, what, when , where how, why)
+    if len(doc) > 0 and doc[0].text.lower() in ["who", "what", "when", "where", "how", "why"]:
         return True
     
     # Check if the sentence contains a question mark
@@ -79,13 +79,6 @@ def is_statement(doc):
     # Check if the sentence contains a verb
     if any(token.pos_ == "VERB" for token in doc):
         return True
-
-    # Check if the sentence contains an imperative verb (e.g., "give," "tell," "go," "make," "drive")
-    if any(token.lemma_.lower() in ["give", "tell", "go", "make", "drive"] for token in doc):
-        return True
-
-    # You can add more specific criteria as needed based on your use case
-
     return False
 # This function takes user input (utterance) and a list of intents, then matches the user input with the fuzzy regex patterns in the intents. It returns a list of matched intents sorted by the number of errors.
 def match_intent(utterance, intents):
@@ -110,22 +103,21 @@ def match_intent(utterance, intents):
 # This function classifies the speech act (e.g., question, command, statement) of the utterance using spaCy.
 def classify_speech_act(utterance):
     doc = nlp(utterance)
-    
     # Check for "ORG" entities
     if any(ent.label_ == "ORG" for ent in doc.ents):
         return "Sorry, I don't know. I don't work for that organization."
     
     # Check for "GPE" entities
     if any(ent.label_ == "GPE" for ent in doc.ents):
-        return "Sorry, I don't know. I've never been to that place."
+        return f"Sorry, I don't know. I've never been to that place."
     
     # Check if it's a question
     if is_question(doc):
-        return "It seems like you're asking a question, but I may not have the answer."
+        return "It seems like you're asking a question, but I don't have the answer."
     
     # Check if it's a statement
     if is_statement(doc):
-        return "It looks like you're making a statement. Is there something specific you'd like to know?"
+        return "It looks like you're making a statement. But I'm unable to understand."
     
 
     
@@ -163,6 +155,7 @@ def generate(intent, responses, questions, utterance):
         if len(intent) == 1:
             # If there's only one matching intent, return the corresponding response
             return responses[intent[0][0]]
+        #If there's multiple matches, print the responses numbered and let the user input a choice to choose which one they want answered    
         else:
             response = "I found multiple possible matches:\n"
             for i, (intent_index, errors) in enumerate(intent, start=1):

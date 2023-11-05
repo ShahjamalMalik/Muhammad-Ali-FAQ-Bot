@@ -1,5 +1,11 @@
 import discord
-from muhammad_ali_faq_bot import load_FAQ_data, match_intent
+import re
+import spacy
+from spacy.matcher import Matcher
+from muhammad_ali_faq_bot import load_FAQ_data, match_intent, is_question, is_statement, classify_speech_act, check_for_farewell, check_for_greeting
+
+# Load the spaCy English model
+nlp = spacy.load("en_core_web_sm")
 
 # Load questions, responses, and intents from external data files
 questions, responses, intents = load_FAQ_data()
@@ -29,16 +35,6 @@ class MyClient(discord.Client):
         utterance = message.content.lower().replace(".", "").replace("?", "")
         user_id = str(message.author.id)
 
-        if utterance.lower() in ["hello", "hi", "hey"]:
-            # Greeting response
-            await message.channel.send("Hello! How can I help you?")
-            return
-
-        if utterance.lower() in ["goodbye", "bye", "quit"]:
-            # Goodbye response, and exit the bot
-            await message.channel.send("Goodbye!")
-            return
-
         intent = []
         if user_id in user_conversations:
             # Continue the existing conversation
@@ -46,7 +42,7 @@ class MyClient(discord.Client):
             try:
                 choice = int(utterance)
                 if choice > 0 and choice <= len(conversation):
-                    # Retrieve and send the response based on user's choice
+                    # Retrieve and send the response based on the user's choice
                     response = responses[conversation[choice - 1][0]]
                     await message.channel.send(response)
                     del user_conversations[user_id]  # End the conversation
@@ -70,6 +66,39 @@ class MyClient(discord.Client):
                     matches_text += "Please specify which question you'd like me to answer (enter a number): "
                     await message.channel.send(matches_text)
                     user_conversations[user_id] = sorted_intents
+            else:
+                # No intent matched, so classify the speech act and respond accordingly
+                if check_for_greeting(utterance):
+                    # Greeting response
+                    await message.channel.send("Hello! How can I help you?")
+                elif check_for_farewell(utterance):
+                    # Goodbye response, and exit the bot
+                    await message.channel.send("Goodbye!")
+                # If get to is in the string, send a google maps link
+                elif "get to" in utterance:
+                    location = re.search(r'get to (.+)', utterance).group(1)
+                    google_maps_link = f"https://www.google.com/maps/search/{location.replace(' ', '%20')}"
+                    await message.channel.send(f"Sorry, I don't know, but you could try Google Maps. Here's a link: {google_maps_link}")
+                else:
+                    #Set the entity_name if the label matches to PERSON or WORK_OF_ART
+                    entity_name = None
+                    for ent in nlp(utterance).ents:
+                        if ent.label_ in ["PERSON", "WORK_OF_ART"]:
+                            entity_name = ent.text
+                            break
+                    #If the entity_name is muhammad ali, send the message, if it isn't though then send a wikipedia page link for that person or work of art
+                    if entity_name == "muhammad ali":
+                        await message.channel.send("This is a FAQ Bot about Muhammad Ali, please ask the questions in questions.txt to have them answered")
+                    elif entity_name and entity_name.lower() != "muhammad ali":
+                        wikipedia_link = f"https://en.wikipedia.org/wiki/{entity_name.replace(' ', '_')}"
+                        await message.channel.send(f"Sorry, I don't know, but maybe you could try Wikipedia. Here's a link: {wikipedia_link}")
+                    else:
+                        # Handle other unclassified responses or provide a default response
+                        response = classify_speech_act(utterance)
+                        await message.channel.send(response)
+
+
+
 
 def main():
     # Create and run the Discord bot
