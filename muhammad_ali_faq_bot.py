@@ -1,6 +1,12 @@
 import re
-import sys  
-# This function loads data from external files (questions.txt, answers.txt, and fuzzy_regex.txt) and returns the loaded questions, answers, and intents. These files contain information about the FAQ items and the fuzzy regex patterns for matching user input.
+import sys
+import spacy
+from spacy.matcher import Matcher
+
+# Load the spaCy English model
+nlp = spacy.load("en_core_web_sm")
+
+# This function loads data from external files (questions.txt, answers.txt, and fuzzy_regex.txt) and returns the loaded questions, answers, and intents.
 def load_FAQ_data():
     questions = []
     answers = []
@@ -18,6 +24,23 @@ def load_FAQ_data():
         intents = [line.strip() for line in fuzzy_regex_file]
 
     return questions, answers, intents
+
+
+# A function to check for greetings
+def check_for_greeting(utterance):
+    doc = nlp(utterance)
+    matcher = Matcher(nlp.vocab)
+
+    # Defining a pattern for common greetings
+    greeting_pattern = [{"LOWER": {"in": ["hello", "hi", "hey"]}}]
+
+    # Adding the greeting pattern to the matcher
+    matcher.add("Greeting", [greeting_pattern])
+
+    # Usinf the matcher to find matches in the input
+    matches = matcher(doc)
+
+    return any(matches)
 
 # This function takes user input (utterance) and a list of intents, then matches the user input with the fuzzy regex patterns in the intents. It returns a list of matched intents sorted by the number of errors.
 def match_intent(utterance, intents):
@@ -39,16 +62,40 @@ def match_intent(utterance, intents):
 
     return []
 
-# This function generates responses based on the matched intent and user input. It handles different scenarios, such as greetings and goodbyes. If there's a single matched intent, it returns the corresponding response. If there are multiple matched intents, it lets the user choose from the available options.
-def generate(intent, responses, questions, utterance):
-    if not intent:
-        if "hello" in utterance or "hi" in utterance or "hey" in utterance:
-            return "Hello! How can I help you?"
-        if "goodbye" in utterance or "quit" in utterance or "exit" in utterance:
-            print("Goodbye!")  
-            sys.exit(0)  # Terminate the script
-        return "I'm not able to answer that about Muhammad Ali"
+# This function classifies the speech act (e.g., question, command, statement) of the utterance.
+def classify_speech_act(utterance):
+    doc = nlp(utterance)
 
+    if any(ent.label_ == "ORG" for ent in doc.ents):
+        return "Sorry, I don't know. I don't work for that organization."
+    elif any(ent.label_ == "GPE" for ent in doc.ents):
+        return "Sorry, I don't know. I've never been to that place."
+    elif any(question_word in utterance for question_word in ["how", "what", "why", "where", "when"]):
+        return "Sorry, I don't know the answer to that."
+    elif any(command_word in utterance for command_word in ["give", "tell", "go", "make", "drive"]):
+        return "Sorry, I don't know how to do that."
+    else:
+        return "Sorry, I don't understand your request."
+
+# This function generates responses based on the matched intent and user input.
+def generate(intent, responses, questions, utterance):
+    print(utterance)
+    if not intent:
+        if "get to" in utterance:
+            location = re.search(r'get to (.+)', utterance).group(1)
+            google_maps_link = f"https://www.google.com/maps/search/{location.replace(' ', '%20')}"
+            return f"Sorry, I don't know, but you could try Google Maps. Here's a link: {google_maps_link}"
+        elif any(ent.label_ in ["PERSON", "WORK_OF_ART"] for ent in nlp(utterance).ents):
+            entity_name = next(ent.text for ent in nlp(utterance).ents if ent.label_ in ["PERSON", "WORK_OF_ART"])
+            if(entity_name == "muhammad ali"):
+                return f"This is a FAQ Bot about Muhammad Ali, please ask the questions in questions.txt to have them answered"
+            else: 
+                wikipedia_link = f"https://en.wikipedia.org/wiki/{entity_name.replace(' ', '_')}"
+                return f"Sorry, I don't know, but maybe you could try Wikipedia. Here's a link: {wikipedia_link}"
+        else:
+            speech_act_response = classify_speech_act(utterance)
+            return speech_act_response
+    
     if isinstance(intent, int):
         # If there's only one matching intent, return the corresponding response
         return responses[intent]
@@ -72,7 +119,7 @@ def generate(intent, responses, questions, utterance):
                     return "Invalid choice. Please enter a valid number."
             except ValueError:
                 return "Invalid input. Please enter a number."
-
+    
 
 # Main program execution
 def main():
@@ -85,10 +132,13 @@ def main():
         while True:
             # Get user's input and process it
             utterance = input(">>> ").strip().lower().replace(".", "").replace("?", "")
-            
-            intent = match_intent(utterance, intents)
-            response = generate(intent, responses, questions, utterance)
-            print(response)
+
+            if check_for_greeting(utterance):
+                print("Hello! How can I assist you today?")
+            else:
+                intent = match_intent(utterance, intents)
+                response = generate(intent, responses, questions, utterance)
+                print(response)
             print()
     except KeyboardInterrupt:
         print("Goodbye!")
